@@ -1,0 +1,62 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      # Modo KRaft
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+
+      # Configuração do quorum (Raft)
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_HOST://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Configs básicas
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+      # Cluster ID fixo (necessário no KRaft)
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  kafka-init:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - kafka
+    volumes:
+    - ./src/scripts:/scripts
+    entrypoint: ["/bin/bash", "/scripts/create-topics.sh"]
+    environment:
+      KAFKA_BROKER: kafka:9092
+  
+  api:
+    build: .
+    command: python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      - kafka
+  
+  consumer:
+    build: .
+    command: python -m src.consumer.worker
+    environment:
+      KAFKA_BROKER: kafka:9092
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      - kafka
+      - kafka-init # ⬅️ Garante que os tópicos existem antes de rodar
