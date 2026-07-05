@@ -169,13 +169,18 @@ make kafka-shell
 
 ---
 
-## 🚀 Próximos passos (roadmap)
+## 📋 Backlog de Melhorias
 
-- [ ] Criar evento `pedido.pago`
-- [ ] Criar segundo consumer (envio/logística)
-- [ ] Persistência com banco de dados (PostgreSQL)
-- [ ] Implementar retry e DLQ (Dead Letter Queue)
-- [ ] Adicionar observabilidade (logs estruturados / tracing)
+Para guiar a evolução deste projeto de um protótipo de estudo para um serviço pronto para produção, criamos um planejamento detalhado de melhorias estruturado em formato de backlog. 
+
+O planejamento completo está disponível no arquivo [BACKLOG.md](file:///home/work/Documentos/Github/kafka-project/BACKLOG.md) e está dividido nos seguintes tópicos:
+
+* **Épico 1: Qualidade de Código, Padronização e Testes** (Instalação do Ruff, Mypy, pytest e adição de testes unitários/integração).
+* **Épico 2: Resiliência, Robustez e Tratamento de Erros** (Migração para `aiokafka` ou `confluent-kafka` e criação de mecanismo de Retry e DLQ).
+* **Épico 3: Persistência e Integração com Banco de Dados** (Configuração do PostgreSQL no docker-compose e persistência do estado dos pedidos).
+* **Épico 4: Observabilidade e Configuração Dinâmica** (Logs estruturados com structlog, variáveis de ambiente com Pydantic Settings e rota de health check).
+
+Veja todos os detalhes no arquivo [BACKLOG.md](file:///home/work/Documentos/Github/kafka-project/BACKLOG.md).
 
 ---
 
