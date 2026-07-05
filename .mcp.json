@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "github": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "export GITHUB_PERSONAL_ACCESS_TOKEN=\"$(grep -E '^GITHUB_TOKEN=' \"/home/work/Documentos/Github/kafka-project/.env\" | head -1 | cut -d= -f2- | tr -d '\\r')\"; exec docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN -e GITHUB_TOOLSETS=issues,pull_requests,repos ghcr.io/github/github-mcp-server:v1.5.0"
+      ]
+    }
+  }
+}
