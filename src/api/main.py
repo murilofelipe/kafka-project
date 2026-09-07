@@ -1,28 +1,29 @@
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from src.core.kafka_config import get_producer
-
-app = FastAPI()
-
-producer = None
+from src.core.config import settings
+from src.core.kafka_config import create_producer
 
 
-@app.on_event("startup")
-def startup_event():
-    global producer
-    producer = get_producer()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.producer = await create_producer()
+    try:
+        yield
+    finally:
+        await app.state.producer.stop()
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/pedido")
-def criar_pedido():
+async def criar_pedido():
     pedido = {"pedido_id": str(uuid.uuid4()), "status": "CRIADO"}
 
     print("📤 Enviando evento:", pedido)
-
-    assert producer is not None, "Producer Kafka não inicializado"
-    producer.send("pedidos", pedido)
-    producer.flush()
+    await app.state.producer.send_and_wait(settings.topic_pedidos, pedido)
 
     return {"message": "Pedido enviado para processamento", "pedido": pedido}

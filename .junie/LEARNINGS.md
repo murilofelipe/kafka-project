@@ -4,8 +4,9 @@
 
 ## Kafka
 
-- kafka-python esta desatualizado e pode ter problemas com Python 3.12+.
-  Planejar migracao para aiokafka ou confluent-kafka.
+- Migrado de kafka-python para aiokafka (Story 2.1). Producer/consumer sao
+  assincronos: usar `await ...send_and_wait()` e `async for msg in consumer`.
+  Producer da API vive no `lifespan` do FastAPI; consumer roda em `asyncio.run`.
 - Consumer com `auto_offset_reset=earliest` garante processar mensagens
   perdidas, mas pode reprocessar duplicatas.
 
