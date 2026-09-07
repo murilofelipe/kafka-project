@@ -1,3 +1,8 @@
 fastapi
 uvicorn
-kafka-python
+aiokafka
+pydantic-settings
+sqlalchemy[asyncio]
+asyncpg
+aiosqlite
+httpx

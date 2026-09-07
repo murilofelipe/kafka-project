@@ -40,6 +40,18 @@ services:
     environment:
       KAFKA_BROKER: kafka:9092
   
+  db:
+    image: postgres:16-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: kafka
+      POSTGRES_PASSWORD: kafka
+      POSTGRES_DB: pedidos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   api:
     build: .
     command: python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
@@ -47,16 +59,23 @@ services:
       - "8000:8000"
     environment:
       KAFKA_BROKER: kafka:9092
+      DATABASE_URL: postgresql+asyncpg://kafka:kafka@db:5432/pedidos
       PYTHONUNBUFFERED: 1
     depends_on:
       - kafka
-  
+      - db
+
   consumer:
     build: .
     command: python -m src.consumer.worker
     environment:
       KAFKA_BROKER: kafka:9092
+      DATABASE_URL: postgresql+asyncpg://kafka:kafka@db:5432/pedidos
       PYTHONUNBUFFERED: 1
     depends_on:
       - kafka
       - kafka-init # ⬅️ Garante que os tópicos existem antes de rodar
+      - db
+
+volumes:
+  pgdata:

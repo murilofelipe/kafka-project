@@ -1,44 +1,67 @@
-from kafka import KafkaProducer, KafkaConsumer
+"""Fábricas de Producer/Consumer Kafka assíncronos (aiokafka)."""
+
+import asyncio
 import json
-import os
-import time
 
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+
+from src.core.config import settings
+from src.core.logging_config import get_logger
+
+log = get_logger("kafka")
 
 
-def get_producer():
-    for i in range(10):
+def _serialize(value: dict) -> bytes:
+    return json.dumps(value).encode("utf-8")
+
+
+def _deserialize(raw: bytes) -> dict:
+    return json.loads(raw.decode("utf-8"))
+
+
+async def create_producer(retries: int = 10) -> AIOKafkaProducer:
+    """Cria e inicia um producer, tentando reconectar enquanto o broker sobe."""
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 1):
+        producer = AIOKafkaProducer(
+            bootstrap_servers=settings.kafka_broker,
+            value_serializer=_serialize,
+        )
         try:
-            print(f"Tentando conectar ao Kafka ({i+1}/10)...")
-            producer = KafkaProducer(
-                bootstrap_servers=KAFKA_BROKER,
-                value_serializer=lambda v: json.dumps(v).encode("utf-8")
-            )
-            print("✅ Conectado ao Kafka!")
+            await producer.start()
+            log.info("producer conectado ao Kafka")
             return producer
-        except Exception as e:
-            print(f"Kafka indisponível, retry em 2s... ({e})")
-            time.sleep(2)
-
-    raise Exception("❌ Não conseguiu conectar ao Kafka")
-
-def get_consumer(topic, group_id):
-    for i in range(10):
-        try:
-            print(f"Tentando conectar consumer ({i+1}/10)...")
-            consumer = KafkaConsumer(
-                bootstrap_servers=KAFKA_BROKER,
-                group_id=group_id,
-                value_deserializer=lambda x: json.loads(x.decode("utf-8")),
-                auto_offset_reset="earliest",
-                enable_auto_commit=True,
+        except Exception as exc:  # noqa: BLE001 - broker ainda subindo
+            last_error = exc
+            log.warning(
+                "kafka indisponível", extra={"tentativa": attempt, "de": retries, "erro": str(exc)}
             )
+            await producer.stop()
+            await asyncio.sleep(2)
+    raise RuntimeError(f"Não conseguiu conectar o producer ao Kafka: {last_error}")
 
-            consumer.subscribe([topic])
-            print("✅ Consumer conectado!")
+
+async def create_consumer(topic: str, group_id: str, retries: int = 10) -> AIOKafkaConsumer:
+    """Cria e inicia um consumer inscrito em ``topic``."""
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 1):
+        consumer = AIOKafkaConsumer(
+            topic,
+            bootstrap_servers=settings.kafka_broker,
+            group_id=group_id,
+            value_deserializer=_deserialize,
+            auto_offset_reset="earliest",
+            enable_auto_commit=True,
+        )
+        try:
+            await consumer.start()
+            log.info("consumer conectado ao Kafka")
             return consumer
-        except Exception as e:
-            print(f"Kafka indisponível, retry em 2s... ({e})")
-            time.sleep(2)
-
-    raise Exception("❌ Consumer não conseguiu conectar ao Kafka")
+        except Exception as exc:  # noqa: BLE001 - broker ainda subindo
+            last_error = exc
+            log.warning(
+                "kafka indisponível", extra={"tentativa": attempt, "de": retries, "erro": str(exc)}
+            )
+            await consumer.stop()
+            await asyncio.sleep(2)
+    raise RuntimeError(f"Não conseguiu conectar o consumer ao Kafka: {last_error}")
