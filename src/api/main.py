@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from src.core.config import settings
 from src.core.db import init_models
 from src.core.kafka_config import create_producer
+from src.core.pedidos import criar_pedido as persistir_pedido
 
 
 @asynccontextmanager
@@ -25,6 +26,7 @@ app = FastAPI(lifespan=lifespan)
 async def criar_pedido():
     pedido = {"pedido_id": str(uuid.uuid4()), "status": "CRIADO"}
 
+    await persistir_pedido(pedido["pedido_id"])
     print("📤 Enviando evento:", pedido)
     await app.state.producer.send_and_wait(settings.topic_pedidos, pedido)
 

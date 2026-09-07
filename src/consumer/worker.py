@@ -3,7 +3,9 @@ import asyncio
 from aiokafka import AIOKafkaProducer
 
 from src.core.config import settings
+from src.core.db import init_models
 from src.core.kafka_config import create_consumer, create_producer
+from src.core.pedidos import atualizar_status
 
 STATUS_VALIDOS = {"CRIADO"}
 
@@ -22,10 +24,13 @@ async def processar_com_retry(evento: dict, dlq: AIOKafkaProducer) -> None:
     for tentativa in range(1, settings.retry_max + 1):
         try:
             await processar_evento(evento)
+            await atualizar_status(evento["pedido_id"], "PAGO")
             return
         except Exception as exc:  # noqa: BLE001 - qualquer falha de processamento vira retry
             if tentativa == settings.retry_max:
                 print(f"❌ Falhou após {tentativa} tentativas, enviando para DLQ: {exc}")
+                if evento.get("pedido_id"):
+                    await atualizar_status(evento["pedido_id"], "FALHADO")
                 await dlq.send_and_wait(settings.topic_dlq, evento)
                 return
             espera = settings.retry_backoff_base_seconds * 2 ** (tentativa - 1)
@@ -34,6 +39,7 @@ async def processar_com_retry(evento: dict, dlq: AIOKafkaProducer) -> None:
 
 
 async def main() -> None:
+    await init_models()
     consumer = await create_consumer(settings.topic_pedidos, settings.consumer_group)
     dlq = await create_producer()
     print("🟢 Consumer iniciado... 👀 Aguardando mensagens...")
