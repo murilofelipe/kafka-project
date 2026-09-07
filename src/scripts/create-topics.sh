@@ -17,6 +17,7 @@ echo "✅ Kafka disponível!"
 # Lista de tópicos
 topics=(
   "pedidos"
+  "pedidos-dlq"
   "pagamentos"
   "envios"
 )
