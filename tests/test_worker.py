@@ -1,15 +1,31 @@
 import asyncio
+from unittest.mock import AsyncMock
+
+import pytest
 
 from src.consumer import worker
 
 
 def test_processar_evento_criado(capsys):
     asyncio.run(worker.processar_evento({"pedido_id": "p1", "status": "CRIADO"}))
-    out = capsys.readouterr().out
-    assert "Processando pagamento do pedido p1" in out
+    assert "Processando pagamento do pedido p1" in capsys.readouterr().out
 
 
-def test_processar_evento_outro_status(capsys):
-    asyncio.run(worker.processar_evento({"pedido_id": "p2", "status": "OUTRO"}))
-    out = capsys.readouterr().out
-    assert "Processando pagamento" not in out
+def test_processar_evento_invalido_levanta():
+    with pytest.raises(ValueError):
+        asyncio.run(worker.processar_evento({"pedido_id": "p2", "status": "OUTRO"}))
+
+
+def test_retry_sucesso_nao_vai_para_dlq():
+    dlq = AsyncMock()
+    asyncio.run(worker.processar_com_retry({"pedido_id": "p1", "status": "CRIADO"}, dlq))
+    dlq.send_and_wait.assert_not_awaited()
+
+
+def test_retry_esgota_e_envia_para_dlq(monkeypatch):
+    monkeypatch.setattr(worker.settings, "retry_max", 3)
+    monkeypatch.setattr(worker.settings, "retry_backoff_base_seconds", 0)
+    dlq = AsyncMock()
+    evento = {"pedido_id": "p9", "status": "INVALIDO"}
+    asyncio.run(worker.processar_com_retry(evento, dlq))
+    dlq.send_and_wait.assert_awaited_once_with("pedidos-dlq", evento)
