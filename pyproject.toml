@@ -1,6 +1,6 @@
 [project]
 name = "kafka-project"
-version = "0.1.0"
+version = "0.2.0"
 description = "Arquitetura orientada a eventos com Apache Kafka, FastAPI (producer) e worker Python (consumer)."
 requires-python = ">=3.11"
 dynamic = ["dependencies"]
