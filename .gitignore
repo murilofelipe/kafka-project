@@ -129,3 +129,6 @@ venv.bak/
 
 # PyCharm settings
 .idea/
+
+# Banco local (SQLite dev/testes)
+*.db

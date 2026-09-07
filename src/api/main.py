@@ -4,11 +4,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.core.config import settings
+from src.core.db import init_models
 from src.core.kafka_config import create_producer
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await init_models()
     app.state.producer = await create_producer()
     try:
         yield

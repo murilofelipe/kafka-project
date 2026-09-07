@@ -2,3 +2,6 @@ fastapi
 uvicorn
 aiokafka
 pydantic-settings
+sqlalchemy[asyncio]
+asyncpg
+aiosqlite
