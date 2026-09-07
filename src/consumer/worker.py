@@ -1,24 +1,24 @@
-from src.core.kafka_config import get_consumer
+import asyncio
 
-consumer = get_consumer("pedidos", "pagamento-service")
+from src.core.config import settings
+from src.core.kafka_config import create_consumer
 
-print("🟢 Consumer iniciado...")
-print("👀 Aguardando mensagens...")
 
-while True:
-    records = consumer.poll(timeout_ms=1000)
+async def processar_evento(evento: dict) -> None:
+    print(f"📦 Evento recebido: {evento}")
+    if evento.get("status") == "CRIADO":
+        print(f"💳 Processando pagamento do pedido {evento['pedido_id']}")
 
-    if not records:
-        print("⏳ Nenhuma mensagem...")
-        continue
 
-    for _topic_partition, messages in records.items():
-        for msg in messages:
-            print("🔥 Mensagem crua:", msg)
+async def main() -> None:
+    consumer = await create_consumer(settings.topic_pedidos, settings.consumer_group)
+    print("🟢 Consumer iniciado... 👀 Aguardando mensagens...")
+    try:
+        async for msg in consumer:
+            await processar_evento(msg.value)
+    finally:
+        await consumer.stop()
 
-            evento = msg.value
 
-            print(f"📦 Evento recebido: {evento}")
-
-            if evento.get("status") == "CRIADO":
-                print(f"💳 Processando pagamento do pedido {evento['pedido_id']}")
+if __name__ == "__main__":
+    asyncio.run(main())
