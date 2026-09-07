@@ -12,7 +12,7 @@ while True:
         print("⏳ Nenhuma mensagem...")
         continue
 
-    for topic_partition, messages in records.items():
+    for _topic_partition, messages in records.items():
         for msg in messages:
             print("🔥 Mensagem crua:", msg)
 

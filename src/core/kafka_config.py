@@ -1,7 +1,8 @@
-from kafka import KafkaProducer, KafkaConsumer
 import json
 import os
 import time
+
+from kafka import KafkaConsumer, KafkaProducer
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
 
@@ -9,10 +10,10 @@ KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
 def get_producer():
     for i in range(10):
         try:
-            print(f"Tentando conectar ao Kafka ({i+1}/10)...")
+            print(f"Tentando conectar ao Kafka ({i + 1}/10)...")
             producer = KafkaProducer(
                 bootstrap_servers=KAFKA_BROKER,
-                value_serializer=lambda v: json.dumps(v).encode("utf-8")
+                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
             )
             print("✅ Conectado ao Kafka!")
             return producer
@@ -22,10 +23,11 @@ def get_producer():
 
     raise Exception("❌ Não conseguiu conectar ao Kafka")
 
+
 def get_consumer(topic, group_id):
     for i in range(10):
         try:
-            print(f"Tentando conectar consumer ({i+1}/10)...")
+            print(f"Tentando conectar consumer ({i + 1}/10)...")
             consumer = KafkaConsumer(
                 bootstrap_servers=KAFKA_BROKER,
                 group_id=group_id,

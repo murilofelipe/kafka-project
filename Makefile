@@ -32,6 +32,26 @@ logs-consumer:
 
 
 # ===============================
+# ✅ Qualidade
+# ===============================
+
+lint:
+	@echo "🔎 Lint (ruff + mypy)..."
+	ruff check src tests
+	ruff format --check src tests
+	mypy src
+
+format:
+	@echo "🎨 Formatando (ruff)..."
+	ruff format src tests
+	ruff check --fix src tests
+
+test:
+	@echo "🧪 Rodando testes..."
+	pytest
+
+
+# ===============================
 # 🔁 Testes rápidos
 # ===============================
 
