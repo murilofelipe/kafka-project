@@ -6,6 +6,9 @@ import json
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from src.core.config import settings
+from src.core.logging_config import get_logger
+
+log = get_logger("kafka")
 
 
 def _serialize(value: dict) -> bytes:
@@ -26,11 +29,13 @@ async def create_producer(retries: int = 10) -> AIOKafkaProducer:
         )
         try:
             await producer.start()
-            print("✅ Producer conectado ao Kafka!")
+            log.info("producer conectado ao Kafka")
             return producer
         except Exception as exc:  # noqa: BLE001 - broker ainda subindo
             last_error = exc
-            print(f"Kafka indisponível ({attempt}/{retries}), retry em 2s... ({exc})")
+            log.warning(
+                "kafka indisponível", extra={"tentativa": attempt, "de": retries, "erro": str(exc)}
+            )
             await producer.stop()
             await asyncio.sleep(2)
     raise RuntimeError(f"Não conseguiu conectar o producer ao Kafka: {last_error}")
@@ -50,11 +55,13 @@ async def create_consumer(topic: str, group_id: str, retries: int = 10) -> AIOKa
         )
         try:
             await consumer.start()
-            print("✅ Consumer conectado ao Kafka!")
+            log.info("consumer conectado ao Kafka")
             return consumer
         except Exception as exc:  # noqa: BLE001 - broker ainda subindo
             last_error = exc
-            print(f"Kafka indisponível ({attempt}/{retries}), retry em 2s... ({exc})")
+            log.warning(
+                "kafka indisponível", extra={"tentativa": attempt, "de": retries, "erro": str(exc)}
+            )
             await consumer.stop()
             await asyncio.sleep(2)
     raise RuntimeError(f"Não conseguiu conectar o consumer ao Kafka: {last_error}")

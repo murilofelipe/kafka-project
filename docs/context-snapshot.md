@@ -9,7 +9,10 @@ FastAPI (producer) e worker Python (consumer). Dockerizado.
 
 ## Estado atual
 
-Prototipo funcional. Sem persistencia, sem testes, sem observabilidade.
+Producer/consumer assincronos (aiokafka). Pedidos persistidos em Postgres
+(SQLAlchemy async), retry com backoff + DLQ (`pedidos-dlq`), config via
+Pydantic Settings (`src/core/config.py`), logs JSON estruturados e
+endpoint `/health`. Testes em `tests/` (pytest, `make test`).
 
 ## Regras
 

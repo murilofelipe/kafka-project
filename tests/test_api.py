@@ -26,3 +26,16 @@ def test_criar_pedido_publica_evento(client):
     topic, evento = client.fake_producer.send_and_wait.await_args.args
     assert topic == "pedidos"
     assert evento["pedido_id"] == body["pedido"]["pedido_id"]
+
+
+def test_health_ok(client):
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok", "checks": {"kafka": True, "database": True}}
+
+
+def test_health_degraded_quando_kafka_cai(client):
+    client.fake_producer.client.fetch_all_metadata.side_effect = OSError("down")
+    resp = client.get("/health")
+    assert resp.status_code == 503
+    assert resp.json()["checks"]["kafka"] is False
