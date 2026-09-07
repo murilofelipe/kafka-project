@@ -2,13 +2,13 @@ name: Code Quality and Coverage
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "develop" ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "develop" ]
 
 jobs:
   analyze:
-    name: Code Quality, Coverage, and Duplications
+    name: Lint, Types, and Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -18,25 +18,23 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.11'
         cache: 'pip'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install flake8 pytest pytest-cov pylint
+        pip install -r requirements.txt
+        pip install ruff mypy pytest pytest-cov
 
-    - name: Check code quality (flake8)
+    - name: Lint (ruff)
       run: |
-        flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src/ tests/ --count --max-complexity=10 --max-line-length=127 --statistics || true
+        ruff check src tests
+        ruff format --check src tests
 
-    - name: Check for code duplications (pylint)
-      run: |
-        pylint --disable=all --enable=duplicate-code src/ || true
+    - name: Type check (mypy)
+      run: mypy src || true
 
-    - name: Run tests with coverage (pytest & pytest-cov)
+    - name: Tests with coverage (pytest)
       run: |
-        # Run pytest. If no tests are collected (exit code 5), don't fail the build.
-        pytest --cov=src --cov-report=term --cov-report=xml tests/ || ( [[ $? -eq 5 ]] && exit 0 || exit $? )
+        pytest || ( [ $? -eq 5 ] && exit 0 || exit $? )
