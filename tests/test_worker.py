@@ -6,9 +6,10 @@ import pytest
 from src.consumer import worker
 
 
-def test_processar_evento_criado(capsys):
-    asyncio.run(worker.processar_evento({"pedido_id": "p1", "status": "CRIADO"}))
-    assert "Processando pagamento do pedido p1" in capsys.readouterr().out
+def test_processar_evento_criado(caplog):
+    with caplog.at_level("INFO"):
+        asyncio.run(worker.processar_evento({"pedido_id": "p1", "status": "CRIADO"}))
+    assert any(r.pedido_id == "p1" for r in caplog.records)
 
 
 def test_processar_evento_invalido_levanta():
