@@ -1,10 +1,11 @@
 import json
-import os
 import time
 
 from kafka import KafkaConsumer, KafkaProducer
 
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+from src.core.config import settings
+
+KAFKA_BROKER = settings.kafka_broker
 
 
 def get_producer():
