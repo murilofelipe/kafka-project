@@ -18,6 +18,8 @@ class Base(DeclarativeBase):
 
 async def init_models() -> None:
     """Cria as tabelas declaradas em Base.metadata (sem migrations — projeto de estudo)."""
+    from src.core import models  # noqa: F401 - registra as tabelas em Base.metadata
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
