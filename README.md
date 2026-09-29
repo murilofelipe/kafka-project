@@ -1,186 +1,124 @@
+**Português** · [English](README.en.md)
+
 # 🚀 Kafka Event-Driven Project
 
-Projeto simples para estudo de arquitetura orientada a eventos utilizando **Apache Kafka**, **Python (FastAPI)** e **Docker**.
+Projeto de estudo de arquitetura orientada a eventos com **Apache Kafka**, **Python (FastAPI + aiokafka)**, **PostgreSQL** e **Docker**.
 
 ---
 
 ## 🧠 Objetivo
 
-Demonstrar um fluxo básico de mensageria desacoplada:
+Demonstrar um fluxo de mensageria desacoplada, com persistência, resiliência e observabilidade:
 
 ```text
-API (Producer) → Kafka → Consumer
+API (Producer) → Kafka (pedidos) → Consumer → Postgres
+                                       └─ falhas → DLQ (pedidos-dlq)
 ```
 
 ---
 
 ## 🧩 Arquitetura
 
-- **API (FastAPI)** → produz eventos (`pedido`)
-- **Kafka (KRaft mode)** → broker de eventos (sem Zookeeper)
-- **Consumer (Worker)** → consome e processa eventos
+- **API (FastAPI)**: `POST /pedido` grava o pedido como `PENDENTE` no banco e publica o evento no Kafka; `GET /health` testa a conectividade com Kafka e banco (503 se degradado).
+- **Kafka (modo KRaft)**: broker de eventos, sem Zookeeper. Tópicos `pedidos` e `pedidos-dlq`, criados por script de inicialização.
+- **Consumer (worker)**: valida o evento, processa o pagamento com retry e backoff exponencial e marca o pedido como `PAGO`. Após esgotar as tentativas, envia para a DLQ e marca `FALHADO`.
+- **PostgreSQL 16**: estado dos pedidos (SQLAlchemy async). Sem `DATABASE_URL`, cai para SQLite local.
 
 ---
 
 ## 📂 Estrutura do Projeto
 
-```
+```text
 src/
-├── api/ # API (producer)
-├── consumer/ # worker (consumer)
-├── core/ # configuração Kafka
-└── scripts/ # scripts auxiliares (ex: criação de tópicos)
+├── api/        # API (producer)
+├── consumer/   # worker (consumer)
+├── core/       # config (Pydantic Settings), Kafka, banco, modelos, logs JSON
+└── scripts/    # scripts auxiliares (criação de tópicos)
+tests/          # pytest
 ```
 
 ---
 
 ## ⚙️ Requisitos
 
-- Docker
-- Docker Compose
+- Docker e Docker Compose
 - Make (opcional, mas recomendado)
+- Para lint/testes locais: Python e `pip install -r requirements.txt`
 
 ---
 
 ## 🚀 Como rodar
 
-### Subir o ambiente
+| Comando | O que faz |
+|---|---|
+| `make up` / `make up-d` | Sobe o ambiente (em primeiro plano / em background) |
+| `make down` | Para os containers |
+| `make clean` | Remove tudo, incluindo volumes |
+| `make send` | Envia um evento de teste (`POST /pedido`) |
+| `make logs`, `logs-api`, `logs-consumer` | Logs gerais, da API ou do consumer |
 
-```
-make up
-```
+Ou manualmente: `curl -X POST http://localhost:8000/pedido`.
 
-### Rodar em background
+### Exemplo de fluxo
 
-```
-make up-d
-```
-
-### Parar containers
-
-```
-make down
-```
-
-### Limpar tudo (incluindo volumes)
-
-```
-make clean
-```
-
----
-
-## 📤 Enviar evento de teste
-
-```
-make send
-```
-
-ou manualmente:
-
-```
-curl -X POST http://localhost:8000/pedido
-```
-
----
-
-## 📜 Logs
-
-### Consumer
-
-```
-make logs-consumer
-```
-
-### API
-
-```
-make logs-api
-```
-
-### Todos
-
-```
-make logs
-```
-
----
-
-## 📬 Exemplo de fluxo
-
-1. Cliente faz requisição:
-
-```
-POST /pedido
-```
-
-2. API publica evento no Kafka:
+1. `POST /pedido` grava o pedido (`PENDENTE`) e publica no Kafka:
 
 ```json
 {
   "pedido_id": "uuid",
   "status": "CRIADO"
 }
-Consumer processa:
-📦 Evento recebido: {...}
-💳 Processando pagamento do pedido ...
 ```
 
-## 🧠 Conceitos aplicados
-
-- Event-Driven Architecture
-- Producer / Consumer Pattern
-- Kafka Topics
-- Consumer Groups
-- Offset Management
-- Comunicação assíncrona
-- Dockerização de serviços
+2. O consumer processa (logs em JSON, com `pedido_id`, `duracao_ms` e `tentativa`) e o pedido passa a `PAGO`.
 
 ---
 
-## ⚠️ Observações importantes
+## 🔧 Configuração
 
-- Uso de `PYTHONUNBUFFERED=1` para evitar buffering de logs no Docker
-- Kafka rodando em modo **KRaft (sem Zookeeper)**
-- Tópicos criados automaticamente via script de inicialização
-- Consumer configurado com `auto_offset_reset=earliest`
+Via variáveis de ambiente ou arquivo de ambiente local (`src/core/config.py`):
+
+| Variável | Padrão |
+|---|---|
+| `KAFKA_BROKER` | `localhost:9092` |
+| `TOPIC_PEDIDOS` / `TOPIC_DLQ` | `pedidos` / `pedidos-dlq` |
+| `CONSUMER_GROUP` | `pagamento-service` |
+| `RETRY_MAX` / `RETRY_BACKOFF_BASE_SECONDS` | `3` / `1.0` |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./kafka_project.db` |
+
+---
+
+## ✅ Qualidade
+
+```bash
+make lint     # ruff + mypy
+make format   # ruff format + fix
+make test     # pytest
+```
+
+O CI (GitHub Actions) roda lint, testes, cobertura e duplicações nos PRs para `develop`.
 
 ---
 
 ## 🔧 Debug e inspeção
 
-Listar consumer groups:
-
-```
-make consumer-groups
-```
-
-Detalhar grupo:
-
-```
-make describe-group
-```
-
-Acessar container Kafka:
-
-```
-make kafka-shell
+```bash
+make consumer-groups   # lista consumer groups
+make describe-group    # detalha o grupo
+make kafka-shell       # acessa o container Kafka
 ```
 
 ---
 
-## 📋 Backlog de Melhorias
+## 🧠 Conceitos aplicados
 
-Para guiar a evolução deste projeto de um protótipo de estudo para um serviço pronto para produção, criamos um planejamento detalhado de melhorias estruturado em formato de backlog. 
+Event-Driven Architecture · Producer/Consumer · Kafka Topics · Consumer Groups · Offset Management (`auto_offset_reset=earliest`) · Retry com backoff e Dead Letter Queue · Comunicação assíncrona · Logs estruturados · Dockerização.
 
-O planejamento completo está disponível no arquivo [BACKLOG.md](file:///home/work/Documentos/Github/kafka-project/BACKLOG.md) e está dividido nos seguintes tópicos:
+---
 
-* **Épico 1: Qualidade de Código, Padronização e Testes** (Instalação do Ruff, Mypy, pytest e adição de testes unitários/integração).
-* **Épico 2: Resiliência, Robustez e Tratamento de Erros** (Migração para `aiokafka` ou `confluent-kafka` e criação de mecanismo de Retry e DLQ).
-* **Épico 3: Persistência e Integração com Banco de Dados** (Configuração do PostgreSQL no docker-compose e persistência do estado dos pedidos).
-* **Épico 4: Observabilidade e Configuração Dinâmica** (Logs estruturados com structlog, variáveis de ambiente com Pydantic Settings e rota de health check).
+## 📋 Backlog e histórico
 
-Veja todos os detalhes no arquivo [BACKLOG.md](file:///home/work/Documentos/Github/kafka-project/BACKLOG.md).
+Planejamento em [BACKLOG.md](BACKLOG.md) e histórico de versões em [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
