@@ -13,7 +13,7 @@ Voce **nao** edita — aponta divergencias.
 1. **Makefile <-> realidade.**
 2. **README <-> setup real.**
 3. **docker-compose.yml <-> servicos reais.**
-4. **`.junie/PROJECT_CONTEXT.md` / `.junie/LEARNINGS.md`.** Ainda verdadeiros?
+4. **`.claude/PROJECT_CONTEXT.md` / `.claude/LEARNINGS.md`.** Ainda verdadeiros?
 
 ## Saida
 

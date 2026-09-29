@@ -11,7 +11,7 @@ bater com o esperado, **pare e pergunte** em vez de improvisar.
 
 Política de versão: `docs/plano-versionamento.md` (SemVer + Conventional
 Commits, sem sufixo `-SNAPSHOT`). Fonte da verdade da versão:
-`[project] version` em `pyproject.toml`. Gotchas: `.junie/LEARNINGS.md`.
+`[project] version` em `pyproject.toml`. Gotchas: `.claude/LEARNINGS.md`.
 
 **Regra de ouro:** todo o processo roda numa `git worktree` isolada — a
 working tree/branch ativa do usuário nunca é tocada. Nunca `git stash` na
